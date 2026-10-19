@@ -4,5 +4,5 @@
 # Build / runtime artifacts
 node_modules/
 web/.vite/
-server
+/server
 reports/
