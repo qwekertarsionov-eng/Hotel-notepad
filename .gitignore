@@ -1,0 +1,8 @@
+/specs/ru/
+.env
+
+# Build / runtime artifacts
+node_modules/
+web/.vite/
+server
+reports/
