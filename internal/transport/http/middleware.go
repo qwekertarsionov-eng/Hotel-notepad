@@ -35,19 +35,19 @@ func JWTMiddleware(next http.Handler) http.Handler {
 		token := strings.TrimPrefix(auth, "Bearer ")
 		parts := strings.Split(token, ".")
 		if len(parts) != 3 {
-			writeError(w, CodeAuthTokenInvalid, http.StatusUnauthorized, "invalid token")
+			writeTokenError(w, CodeAuthTokenInvalid, "invalid token")
 			return
 		}
 		mac := hmac.New(sha256.New, []byte(secret))
 		mac.Write([]byte(parts[0] + "." + parts[1]))
 		expected := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(mac.Sum(nil))
 		if !hmac.Equal([]byte(expected), []byte(parts[2])) {
-			writeError(w, CodeAuthTokenInvalid, http.StatusUnauthorized, "invalid token")
+			writeTokenError(w, CodeAuthTokenInvalid, "invalid token")
 			return
 		}
 		payload, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(parts[1])
 		if err != nil {
-			writeError(w, CodeAuthTokenInvalid, http.StatusUnauthorized, "invalid token")
+			writeTokenError(w, CodeAuthTokenInvalid, "invalid token")
 			return
 		}
 		var claims struct {
@@ -55,7 +55,7 @@ func JWTMiddleware(next http.Handler) http.Handler {
 			Exp int64  `json:"exp"`
 		}
 		if err := json.Unmarshal(payload, &claims); err != nil {
-			writeError(w, CodeAuthTokenInvalid, http.StatusUnauthorized, "invalid token")
+			writeTokenError(w, CodeAuthTokenInvalid, "invalid token")
 			return
 		}
 		if claims.Exp != 0 && time.Now().Unix() >= claims.Exp {
@@ -70,4 +70,9 @@ func JWTMiddleware(next http.Handler) http.Handler {
 		r = r.WithContext(context.WithValue(r.Context(), userIDKey, userID))
 		next.ServeHTTP(w, r)
 	})
+}
+
+// writeTokenError writes a 401 JSON error response for token-related failures.
+func writeTokenError(w http.ResponseWriter, code string, message string) {
+	writeError(w, code, http.StatusUnauthorized, message)
 }

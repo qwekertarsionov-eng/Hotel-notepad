@@ -70,16 +70,27 @@ func respondDomainError(w http.ResponseWriter, err error) {
 	writeError(w, code, status, message)
 }
 
+// domainErrorHandler maps a DomainError to an HTTP status, code and message.
+type domainErrorHandler func(de domain.DomainError) (code string, status int, message string)
+
+// domainErrorHandlers is a lookup table keyed by DomainError code. Unknown
+// codes fall through to the default 500 internal error below.
+var domainErrorHandlers = map[string]domainErrorHandler{
+	CodeAuthEmailTaken: func(de domain.DomainError) (string, int, string) {
+		return CodeAuthEmailTaken, http.StatusConflict, de.Message
+	},
+	CodeAuthInvalidCredentials: func(de domain.DomainError) (string, int, string) {
+		return CodeAuthInvalidCredentials, http.StatusUnauthorized, de.Message
+	},
+}
+
 // mapDomainError converts a service DomainError into an HTTP status, code and
 // safe client message. Unknown errors become 500 without leaking details.
 func mapDomainError(err error) (code string, status int, message string) {
 	var de domain.DomainError
 	if errors.As(err, &de) {
-		switch de.Code {
-		case CodeAuthEmailTaken:
-			return CodeAuthEmailTaken, http.StatusConflict, de.Message
-		case CodeAuthInvalidCredentials:
-			return CodeAuthInvalidCredentials, http.StatusUnauthorized, de.Message
+		if handler, ok := domainErrorHandlers[de.Code]; ok {
+			return handler(de)
 		}
 	}
 	return CodeInternal, http.StatusInternalServerError, "internal error"

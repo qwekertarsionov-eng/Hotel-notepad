@@ -43,12 +43,14 @@ const bcryptCost = bcrypt.DefaultCost
 // Register creates a user with email and bcrypt-hashed password.
 // Returns the new user id or a DomainError (AUTH_EMAIL_TAKEN / INTERNAL_ERROR).
 func (s *authService) Register(email, password string) (int64, error) {
-	if _, err := s.users.GetByEmail(email); err == nil {
+	_, err := s.users.GetByEmail(email)
+	if err == nil {
 		return 0, domain.DomainError{
 			Code:    "AUTH_EMAIL_TAKEN",
 			Message: "user with this email already exists",
 		}
-	} else if !errors.Is(err, postgres.ErrNotFound) {
+	}
+	if !errors.Is(err, postgres.ErrNotFound) {
 		return 0, domain.DomainError{
 			Code:    "INTERNAL_ERROR",
 			Message: "failed to check email uniqueness",

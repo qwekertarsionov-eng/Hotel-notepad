@@ -109,24 +109,7 @@ func (h *Handler) updateGuest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, CodeBadRequest, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if patch.FullName != "" {
-		existing.FullName = patch.FullName
-	}
-	if patch.Phone != "" {
-		existing.Phone = patch.Phone
-	}
-	if patch.RoomNumber != "" {
-		existing.RoomNumber = patch.RoomNumber
-	}
-	if patch.CheckIn != "" {
-		existing.CheckIn = patch.CheckIn
-	}
-	if patch.CheckOut != "" {
-		existing.CheckOut = patch.CheckOut
-	}
-	if patch.Note != "" {
-		existing.Note = patch.Note
-	}
+	applyGuestPatch(&existing, patch)
 	existing.ID = id
 	existing.UserID = userID
 
@@ -291,5 +274,22 @@ func toGuestResponse(g domain.Guest) GuestResponse {
 		CheckOut:   g.CheckOut,
 		Note:       g.Note,
 		UserID:     g.UserID,
+	}
+}
+
+// applyGuestPatch copies non-empty fields from patch onto existing.
+func applyGuestPatch(existing *domain.Guest, patch domain.Guest) {
+	setIfNotEmpty(&existing.FullName, patch.FullName)
+	setIfNotEmpty(&existing.Phone, patch.Phone)
+	setIfNotEmpty(&existing.RoomNumber, patch.RoomNumber)
+	setIfNotEmpty(&existing.CheckIn, patch.CheckIn)
+	setIfNotEmpty(&existing.CheckOut, patch.CheckOut)
+	setIfNotEmpty(&existing.Note, patch.Note)
+}
+
+// setIfNotEmpty assigns value to target when value is non-empty.
+func setIfNotEmpty(target *string, value string) {
+	if value != "" {
+		*target = value
 	}
 }
